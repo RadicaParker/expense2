@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────
-# MASTER DATA  ← customise to your org
+# MASTER DATA
 # ──────────────────────────────────────────────
 AMOEBAS = [
     "Sales - Enterprise",
@@ -68,7 +68,7 @@ STATUS_COLOURS = {
 }
 
 # ──────────────────────────────────────────────
-# SESSION STATE BOOTSTRAP
+# SESSION STATE
 # ──────────────────────────────────────────────
 if "claims" not in st.session_state:
     st.session_state.claims = []
@@ -86,9 +86,7 @@ def generate_claim_id():
 with st.sidebar:
     st.title("🧾 Expense Claims")
     st.divider()
-
     role = st.selectbox("Login as Role", ROLES)
-
     if role == "Employee":
         user_name   = st.text_input("Your Name", value="New Employee")
         user_amoeba = st.selectbox("Your Amoeba (Department)", AMOEBAS)
@@ -97,9 +95,9 @@ with st.sidebar:
         managed_amoebas = [a for a, m in AMOEBA_MANAGERS.items() if m == manager_name]
     else:
         user_name = "Finance Team"
-
     st.divider()
     st.caption("Internal Finance Tool — SaaS Martech")
+
 
 # ──────────────────────────────────────────────
 # EMPLOYEE VIEW
@@ -109,12 +107,10 @@ if role == "Employee":
 
     with st.form("claim_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
-
         with col1:
             expense_date = st.date_input("Expense Date", value=date.today())
             amount       = st.number_input("Amount (HKD)", min_value=0.01, step=0.01, format="%.2f")
             category     = st.selectbox("Category (QBO Account)", QBO_ACCOUNTS)
-
         with col2:
             description = st.text_area(
                 "Description / Business Purpose",
@@ -127,10 +123,12 @@ if role == "Employee":
             )
 
         st.info(
-            f"This claim will be routed to **{AMOEBA_MANAGERS[user_amoeba]}** "
-            f"for approval under **{user_amoeba}**."
+            "This claim will be routed to **"
+            + AMOEBA_MANAGERS[user_amoeba]
+            + "** for approval under **"
+            + user_amoeba
+            + "**."
         )
-
         submitted = st.form_submit_button("🚀 Submit Claim", use_container_width=True)
 
         if submitted:
@@ -154,17 +152,15 @@ if role == "Employee":
                     "reviewer_note": "",
                 }
                 st.session_state.claims.append(claim)
-
                 if receipt:
                     st.session_state.attachments[claim_id] = {
                         "name":  receipt.name,
                         "bytes": receipt.read(),
                         "type":  receipt.type,
                     }
-
                 st.success(
-                    f"Claim **{claim_id}** submitted! "
-                    f"Pending approval from {AMOEBA_MANAGERS[user_amoeba]}."
+                    "Claim **" + claim_id + "** submitted! "
+                    "Pending approval from " + AMOEBA_MANAGERS[user_amoeba] + "."
                 )
 
     st.divider()
@@ -177,72 +173,73 @@ if role == "Employee":
         for c in reversed(my_claims):
             badge = STATUS_COLOURS.get(c["status"], "⚪")
             with st.expander(
-                f"{badge} {c['claim_id']} | HKD {c['amount']:,.2f} | "
-                f"{c['category']} | {c['expense_date']}"
+                badge + " " + c["claim_id"] + " | HKD "
+                + str(c["amount"]) + " | " + c["category"]
+                + " | " + c["expense_date"]
             ):
-                st.write(f"**Amoeba (Class):** {c['amoeba']}")
-                st.write(f"**Description:** {c['description']}")
-                st.write(f"**Status:** {c['status']}")
+                st.write("**Amoeba (Class):** " + c["amoeba"])
+                st.write("**Description:** " + c["description"])
+                st.write("**Status:** " + c["status"])
                 if c["reviewer_note"]:
-                    st.write(f"**Manager Note:** {c['reviewer_note']}")
+                    st.write("**Manager Note:** " + c["reviewer_note"])
                 if c["has_receipt"] and c["claim_id"] in st.session_state.attachments:
                     att = st.session_state.attachments[c["claim_id"]]
                     st.download_button(
-                        label=f"⬇️ Download Receipt ({att['name']})",
+                        label="⬇️ Download Receipt (" + att["name"] + ")",
                         data=att["bytes"],
                         file_name=att["name"],
                         mime=att["type"],
-                        key=f"dl_emp_{c['claim_id']}",
+                        key="dl_emp_" + c["claim_id"],
                     )
+
 
 # ──────────────────────────────────────────────
 # MANAGER VIEW
 # ──────────────────────────────────────────────
 elif role == "Manager":
-    st.header(f"✅ Approval Queue — {manager_name}")
-    st.caption(f"Managing Amoebas: {', '.join(managed_amoebas)}")
+    st.header("✅ Approval Queue — " + manager_name)
+    st.caption("Managing Amoebas: " + ", ".join(managed_amoebas))
 
     pending  = [c for c in st.session_state.claims if c["manager"] == manager_name and c["status"] == "Pending"]
     reviewed = [c for c in st.session_state.claims if c["manager"] == manager_name and c["status"] != "Pending"]
 
-    tab1, tab2 = st.tabs([f"⏳ Pending ({len(pending)})", f"📋 Reviewed ({len(reviewed)})"])
+    tab1, tab2 = st.tabs(["⏳ Pending (" + str(len(pending)) + ")", "📋 Reviewed (" + str(len(reviewed)) + ")"])
 
     with tab1:
         if not pending:
             st.success("No pending claims. All clear! 🎉")
         for c in pending:
             with st.expander(
-                f"🟡 {c['claim_id']} | {c['submitter']} | "
-                f"HKD {c['amount']:,.2f} | {c['amoeba']}"
+                "🟡 " + c["claim_id"] + " | " + c["submitter"]
+                + " | HKD " + str(c["amount"]) + " | " + c["amoeba"]
             ):
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.write(f"**Submitter:** {c['submitter']}")
-                    st.write(f"**Amoeba (Class):** {c['amoeba']}")
-                    st.write(f"**Expense Date:** {c['expense_date']}")
-                    st.write(f"**Amount:** HKD {c['amount']:,.2f}")
+                    st.write("**Submitter:** " + c["submitter"])
+                    st.write("**Amoeba (Class):** " + c["amoeba"])
+                    st.write("**Expense Date:** " + c["expense_date"])
+                    st.write("**Amount:** HKD " + str(c["amount"]))
                 with col2:
-                    st.write(f"**Category:** {c['category']}")
-                    st.write(f"**Submitted:** {c['submitted_at']}")
-                    st.write(f"**Receipt:** {'Yes ✅' if c['has_receipt'] else 'No ❌'}")
-
-                st.write(f"**Description:** {c['description']}")
+                    st.write("**Category:** " + c["category"])
+                    st.write("**Submitted:** " + c["submitted_at"])
+                    st.write("**Receipt:** " + ("Yes ✅" if c["has_receipt"] else "No ❌"))
+                st.write("**Description:** " + c["description"])
 
                 if c["has_receipt"] and c["claim_id"] in st.session_state.attachments:
                     att = st.session_state.attachments[c["claim_id"]]
                     st.download_button(
-                        label=f"📎 View Receipt ({att['name']})",
+                        label="📎 View Receipt (" + att["name"] + ")",
                         data=att["bytes"],
                         file_name=att["name"],
                         mime=att["type"],
-                        key=f"dl_mgr_{c['claim_id']}",
+                        key="dl_mgr_" + c["claim_id"],
                     )
 
-                note = st.text_input("Note to Employee (optional)", key=f"note_{c['claim_id']}")
+                note = st.text_input("Note to Employee (optional)", key="note_" + c["claim_id"])
                 col_a, col_r = st.columns(2)
 
                 with col_a:
-                    if st.button("✅ Approve", key=f"approve_{c['claim_id']}", use_container_width=True, type="primary"):
+                    if st.button("✅ Approve", key="approve_" + c["claim_id"], use_container_width=True, type="primary"):
                         for claim in st.session_state.claims:
                             if claim["claim_id"] == c["claim_id"]:
                                 claim["status"]        = "Approved"
@@ -251,7 +248,7 @@ elif role == "Manager":
                         st.rerun()
 
                 with col_r:
-                    if st.button("❌ Reject", key=f"reject_{c['claim_id']}", use_container_width=True):
+                    if st.button("❌ Reject", key="reject_" + c["claim_id"], use_container_width=True):
                         for claim in st.session_state.claims:
                             if claim["claim_id"] == c["claim_id"]:
                                 claim["status"]        = "Rejected"
@@ -265,17 +262,18 @@ elif role == "Manager":
         for c in reversed(reviewed):
             badge = STATUS_COLOURS.get(c["status"], "⚪")
             with st.expander(
-                f"{badge} {c['claim_id']} | {c['submitter']} | "
-                f"HKD {c['amount']:,.2f} | {c['status']}"
+                badge + " " + c["claim_id"] + " | " + c["submitter"]
+                + " | HKD " + str(c["amount"]) + " | " + c["status"]
             ):
-                st.write(f"**Amoeba (Class):** {c['amoeba']}")
-                st.write(f"**Category:** {c['category']}")
-                st.write(f"**Reviewed At:** {c['reviewed_at']}")
+                st.write("**Amoeba (Class):** " + c["amoeba"])
+                st.write("**Category:** " + c["category"])
+                st.write("**Reviewed At:** " + c["reviewed_at"])
                 if c["reviewer_note"]:
-                    st.write(f"**Note:** {c['reviewer_note']}")
+                    st.write("**Note:** " + c["reviewer_note"])
+
 
 # ──────────────────────────────────────────────
-# FINANCE VIEW — QBO Bills CSV Export
+# FINANCE VIEW
 # ──────────────────────────────────────────────
 elif role == "Finance":
     st.header("💼 Finance Dashboard — QBO Export")
@@ -287,13 +285,13 @@ elif role == "Finance":
     col1.metric("Total Claims",       len(all_claims))
     col2.metric("Approved",           len(approved))
     col3.metric("Pending",            len([c for c in all_claims if c["status"] == "Pending"]))
-    col4.metric("Total Approved HKD", f"{sum(c['amount'] for c in approved):,.2f}")
+    col4.metric("Total Approved HKD", str(round(sum(c["amount"] for c in approved), 2)))
 
     st.divider()
 
     if approved:
         st.subheader("📊 Approved Spend by Amoeba (Class)")
-        df_approved   = pd.DataFrame(approved)
+        df_approved    = pd.DataFrame(approved)
         amoeba_summary = (
             df_approved.groupby("amoeba")["amount"]
             .sum()
@@ -309,10 +307,6 @@ elif role == "Finance":
     if not approved:
         st.warning("No approved claims to export yet.")
     else:
-        # ── Build QBO Bills rows
-        # QBO Bills CSV required columns:
-        # BillNo, Supplier, BillDate, DueDate, Terms,
-        # Account, LineDescription, LineAmount, LineTaxCode, Class
         rows = []
         for c in approved:
             rows.append({
@@ -329,16 +323,26 @@ elif role == "Finance":
             })
 
         df_qbo = pd.DataFrame(rows)
-
-        # ── Preview
         st.dataframe(df_qbo, use_container_width=True, hide_index=True)
 
-        # ── Download button
         csv_buffer = io.StringIO()
         df_qbo.to_csv(csv_buffer, index=False)
         csv_bytes = csv_buffer.getvalue().encode("utf-8")
 
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+        filename  = "qbo_bills_export_" + timestamp + ".csv"
+
         st.download_button(
             label="⬇️ Download QBO Bills CSV",
             data=csv_bytes,
-            file_name=f"qbo_bills_export_{datetime.now().strftime
+            file_name=filename,
+            mime="text/csv",
+            use_container_width=True,
+            type="primary",
+        )
+
+        st.divider()
+        st.subheader("📋 All Claims Log")
+        df_all = pd.DataFrame(all_claims)
+        if not df_all.empty:
+            st.dataframe(df_all, use
