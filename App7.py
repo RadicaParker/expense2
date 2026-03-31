@@ -209,7 +209,7 @@ if not st.session_state.logged_in:
 
     with tab1:
         st.subheader("Login")
-        st.caption("Admin login: admin@taxhacker.com / Admin123!")
+        st.caption("Hello")
 
         with st.form("login_form"):
             email = st.text_input("Email")
