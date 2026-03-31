@@ -114,7 +114,7 @@ def init_db():
         exec_sql(
             "INSERT INTO users (email, name, password, role, approver_email, user_amoeba) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            ("admin@taxhacker.com", "Admin", hash_pw("Admin123!"), "admin", "", "")
+            ("radicafinance", "Admin", hash_pw("radica!23"), "admin", "", "")
         )
 
     amoeba_count = fetch_one("SELECT COUNT(*) FROM amoebas")[0]
